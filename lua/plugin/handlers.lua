@@ -30,13 +30,6 @@ M["textDocument/hover"] =
 --- @param context lsp.HandlerContext
 --- @param config table Configuration table
     function(error, result, context, config)
-        --util.notify(
-        --    "handling "
-        --    .. "textDocument/hover"
-        --    .. " | "
-        --    .. "result is: \n"
-        --    .. vim.inspect({ error or "", result or "", context or "", config or "" })
-        --)
         -- error received
         if error then
             util.notify("received error: " .. error.message)
@@ -77,13 +70,6 @@ M["fsharp/documentationSymbol"] = function(error, result, context, config)
         util.notify("received error" .. error)
         return
     end
-    -- util.notify(
-    --   "handling "
-    --     .. "fsharp/documentationSymbol"
-    --     .. " | "
-    --     .. "result is: \n"
-    --     .. vim.inspect({ error or "", result or "", context or "", config or "" })
-    -- )
     if result then
         if result.content then
         end
@@ -149,28 +135,16 @@ M["fsharp/notifyWorkspace"] = function(payload)
 end
 
 M["fsharp/workspaceLoad"] = function(result)
-    util.notify(
-        "handling workspaceLoad response\n"
-        .. "result is: \n"
-        .. vim.inspect(result or "result could not be read correctly")
-    )
     if not result then
+        util.notify(
+            "Failed to load workspave\n"
+        )
         return
     end
-    local resultContent = result.content
-    if resultContent == nil then
-        return
-    end
-    local content = vim.json.decode(resultContent)
-    util.notify("json decode of payload content : " .. vim.inspect(content or "not decoded"))
 end
 
 function onChoice(finalChoice)
     util.notify("Loading solution : " .. vim.inspect(finalChoice))
-    --util.notify("Loading solution : " ..
-    --    vim.fn.fnamemodify(vim.fs.normalize(finalPath),
-    --        ":p:."))
-
     ---@type string[]
     local pathsToLoad = {}
     local projects = finalChoice.Data.Items
@@ -192,17 +166,8 @@ function onChoice(finalChoice)
     M.CallFSharpWorkspaceLoad(pathsToLoad)
     for _, proj in ipairs(projectParams) do
         vim.lsp.buf_request(0, "fsharp/project", { proj },
-            function(payload)
-                -- util.notify("fsharp/project load request has a payload of :  " .. vim.inspect( payload or "No Result from Server"))
-            end)
+            function(payload) end)
     end
-
-    --if solutionToLoad ~= nil then
-    --    util.notify("solutionToLoad is set to " ..
-    --        solutionToLoad .. " \nthough currently that doesn't do anything..")
-    --else
-    --    util.notify("for some reason solution to load was null. .... why?")
-    --end
 end
 
 M["fsharp/workspacePeek"] = function(error, result, context, config)
@@ -256,15 +221,7 @@ M["fsharp/workspacePeek"] = function(error, result, context, config)
         end
     end
     local cwd = vim.fs.normalize(vim.fn.getcwd())
-    if directory == cwd then
-        -- util.notify("WorkspacePeek directory \n"
-        --   ..
-        --   directory
-        --   ..
-        --   "\nEquals current working directory\n"
-        --   .. cwd
-        -- )
-    else
+    if directory ~= cwd then
         util.notify(
             "WorkspacePeek directory \n" ..
             directory ..
@@ -274,50 +231,50 @@ M["fsharp/workspacePeek"] = function(error, result, context, config)
     end
     --local solutionToLoad
     local finalChoice
-    if #solutions > 0 then
-        -- util.notify(vim.inspect(#solutions) .. " solutions found in workspace")
-        if #solutions > 1 then
-            -- util.notify("More than one solution found in workspace!")
-            vim.ui.select(solutions, {
-                prompt =
-                "More than one solution found in workspace. Please pick one to load:",
-
-                format_item = function(item)
-                    return vim.fn.fnamemodify(
-                        vim.fs.normalize(item
-                            .Data.Path),
-                        ":p:.")
-                end,
-            }, function(_, index)
-                finalChoice = solutions[index]
-                onChoice(finalChoice)
-            end)
-        else
-            finalChoice = solutions[1]
-            if finalChoice then
-                onChoice(finalChoice)
-            else
-                finalChoice = {
-                    Data = {
-                        Path = vim.fn.getcwd(),
-                        Items = {
-                            Name = vim.fs.find(
-                                function(name, _)
-                                    return name
-                                        :match(
-                                            ".*%.[cf]sproj$")
-                                end,
-                                { type = "file" }),
-                        },
-                    },
-                }
-            end
-            local finalPath = vim.fs.normalize(finalChoice.Data.Found[1].Data.Path)
-            onChoice(finalPath)
-        end
-    else
+    if #solutions < 1 then
         util.notify(
-            "Only one solution in workspace path, projects should be loaded already. ")
+            "Only one solution in workspace path, projects should be loaded already.")
+        return
+    end
+    -- util.notify(vim.inspect(#solutions) .. " solutions found in workspace")
+    if #solutions > 1 then
+        -- util.notify("More than one solution found in workspace!")
+        vim.ui.select(solutions, {
+            prompt =
+            "More than one solution found in workspace. Please pick one to load:",
+
+            format_item = function(item)
+                return vim.fn.fnamemodify(
+                    vim.fs.normalize(item
+                        .Data.Path),
+                    ":p:.")
+            end,
+        }, function(_, index)
+            finalChoice = solutions[index]
+            onChoice(finalChoice)
+        end)
+    else
+        finalChoice = solutions[1]
+        if finalChoice then
+            onChoice(finalChoice)
+        else
+            finalChoice = {
+                Data = {
+                    Path = vim.fn.getcwd(),
+                    Items = {
+                        Name = vim.fs.find(
+                            function(name, _)
+                                return name
+                                    :match(
+                                        ".*%.[cf]sproj$")
+                            end,
+                            { type = "file" }),
+                    },
+                },
+            }
+        end
+        local finalPath = vim.fs.normalize(finalChoice.Data.Found[1].Data.Path)
+        onChoice(finalPath)
     end
 end
 
@@ -349,21 +306,35 @@ M["workspace/workspaceFolders"] = function(error, result, context, config)
 end
 
 M["fsharp/signature"] = function(error, result, context, config)
-    if result then
-        if result.result then
-            if result.result.content then
-                local content = vim.json.decode(result.result.content)
-                if content then
-                    if content.Data then
-                        -- Using gsub() instead of substitute() in Lua
-                        -- and % instead of :
-                        util.notify(content.Data:gsub("\n+$", " "))
-                    end
-                end
-            end
-        end
+    if not result then
+        util.notify("Result of signature was none")
+        return
     end
+    if not result.result then
+        util.notify("Result of signature was none")
+        return
+    end
+    if not result.result.content then
+        util.notify("Result of signature was none")
+        return
+    end
+    local content = vim.json.decode(result.result.content)
+    if not content then
+        util.notify("Result of signature was none")
+        return
+    end
+    if not content.Data then
+        return
+    end
+    -- Using gsub() instead of substitute() in Lua
+    -- and % instead of :
+    util.notify(content.Data:gsub("\n+$", " "))
 end
+
+
+
+
+
 
 function M.CreateHandlers()
     local h = {

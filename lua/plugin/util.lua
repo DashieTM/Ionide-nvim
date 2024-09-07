@@ -315,5 +315,14 @@ function M.notify(msg, level, opts)
     vim.notify(safeMessage, level, opts)
 end
 
+function M.GitFirstRootDir(n)
+    local root
+    root = M.find_git_ancestor(n)
+    root = root or M.root_pattern("*.sln")(n)
+    root = root or M.root_pattern("*.fsproj")(n)
+    root = root or M.root_pattern("*.fsx")(n)
+    return root
+end
+
 return M
 -- vim:et ts=2 sw=2

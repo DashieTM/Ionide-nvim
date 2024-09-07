@@ -2,13 +2,14 @@ local uc = vim.api.nvim_create_user_command
 local autocmd = vim.api.nvim_create_autocmd
 local grp = vim.api.nvim_create_augroup
 local handlers = require("plugin.handlers")
+local util = require("plugin.util")
 
 local M = {}
 M.config = require("plugin.config")
 
 function M.setupAutoCommands(commands)
     M.filetypeCommands()
-    M.bufReadPost()
+    --M.bufReadPost()
     M.bufWritePost()
     M.registerLSPAutocmds()
     uc("IonideTestDocumentationForSymbolRequestParsing", function()
@@ -163,7 +164,7 @@ function M.bufReadPost()
         callback = function()
             local bufnr = vim.api.nvim_get_current_buf()
             local bufname = vim.fs.normalize(vim.api.nvim_buf_get_name(bufnr))
-            local projectRoot = vim.fs.normalize(M.GitFirstRootDir(bufname))
+            local projectRoot = vim.fs.normalize(util.GitFirstRootDir(bufname))
 
             -- util.notify("Searching for Ionide client already started for root path of " .. projectRoot )
             local parentDir = vim.fs.normalize(vim.fs.dirname(bufname))
@@ -303,6 +304,17 @@ function M.registerLSPAutocmds()
             end
         end,
     })
+end
+
+---applies a recommended color scheme for diagnostics and CodeLenses
+function M.ApplyRecommendedColorscheme()
+    vim.cmd([[
+    highlight! LspDiagnosticsDefaultError ctermbg=Red ctermfg=White
+    highlight! LspDiagnosticsDefaultWarning ctermbg=Yellow ctermfg=Black
+    highlight! LspDiagnosticsDefaultInformation ctermbg=LightBlue ctermfg=Black
+    highlight! LspDiagnosticsDefaultHint ctermbg=Green ctermfg=White
+    highlight! default link LspCodeLens Comment
+]])
 end
 
 return M
