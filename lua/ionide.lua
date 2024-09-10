@@ -1,5 +1,3 @@
-local validate = vim.validate
-local grp = vim.api.nvim_create_augroup
 local api = vim.api
 local lsp = vim.lsp
 local M = {}
@@ -615,7 +613,6 @@ function M.Initialize()
     M.autocmds.setupAutoCommands(commands)
 
     local thisBufnr = vim.api.nvim_get_current_buf()
-    local thisBufname = vim.api.nvim_buf_get_name(thisBufnr)
     ---@type vim.lsp.Client
     local thisIonide = vim.lsp.get_clients({ bufnr = thisBufnr, name = "ionide" })[1]
         or { workspace_folders = { { name = vim.fn.getcwd() } } }

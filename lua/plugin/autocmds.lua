@@ -61,7 +61,7 @@ function M.setupAutoCommands(commands)
         end
         commands.CallFSharpWorkspacePeek(
             commands.getIonideClientConfigRootDirOrCwd(),
-            settingsFSharp.workspaceModePeekDeepLevel or 3,
+            settingsFSharp.workspaceModePeekDeepLevel or 10,
             settingsFSharp.excludeProjectDirectories or {}
         )
     end, { desc = "Request a workspace peek from Lsp" })
