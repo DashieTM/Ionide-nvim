@@ -269,6 +269,9 @@ M["fsharp/workspacePeek"] = function(error, result, context, config)
                 },
             }
         end
+        if not finalChoice.Data.Found then
+            return
+        end
         local finalPath = vim.fs.normalize(finalChoice.Data.Found[1].Data.Path)
         onChoice(finalPath)
     end

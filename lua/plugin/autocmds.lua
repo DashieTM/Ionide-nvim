@@ -145,6 +145,35 @@ function M.LoadProjects(projects)
     end
 end
 
+function M.ReloadProjects()
+    util.notify("Reloading Projects")
+    --local foldersCount = #M.projectFolders
+    --if foldersCount > 0 then
+    --handlers.CallFSharpWorkspaceLoad(M.projectFolders)
+    --else
+    --    util.notify("Workspace is empty")
+    --end
+end
+
+-- TODO
+-- TODO TODO TODO
+function M.OnFSProjSave()
+    if
+        vim.bo.ft == "fsharp_project"
+        and M.config.MergedConfig.IonideNvimSettings.AutomaticReloadWorkspace
+        and M.config.MergedConfig.IonideNvimSettings.AutomaticReloadWorkspace == true
+    then
+        util.notify("fsharp project saved, reloading...")
+        -- TODO
+        --local parentDir = vim.fs.normalize(vim.fs.dirname(vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())))
+
+        --if not vim.tbl_contains(M.projectFolders, parentDir) then
+        --    table.insert(M.projectFolders, parentDir)
+        --end
+        M.ReloadProjects()
+    end
+end
+
 function M.bufWritePost()
     autocmd("BufWritePost", {
         pattern = "*.fsproj",
