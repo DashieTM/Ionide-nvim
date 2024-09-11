@@ -228,27 +228,27 @@ function M.registerLSPAutocmds()
         end,
     })
 
-    autocmd({ "LspAttach" }, {
-        desc = "FSharp enable inlayHint on attach ",
-        group = grp("FSharp_enableInlayHint", { clear = true }),
-        pattern = "*.fs,*.fsi,*.fsx",
-        callback = function(args)
-            -- args.data.client_id
-            if M.config.MergedConfig.settings.FSharp.inlayHints.enabled == true then
-                vim.defer_fn(function()
-                    -- util.notify("enabling lsp inlayHint")
-                    if vim.lsp.buf.inlay_hint then
-                        vim.lsp.buf.inlay_hint(args.buf, true)
-                    elseif vim.lsp.inlay_hint then
-                        vim.lsp.inlay_hint.enable(true)
-                    else
-                    end
-                end, 2000)
-            else
-                -- util.notify("lsp inlayHints are not enabled.")
-            end
-        end,
-    })
+    --autocmd({ "LspAttach" }, {
+    --    desc = "FSharp enable inlayHint on attach ",
+    --    group = grp("FSharp_enableInlayHint", { clear = true }),
+    --    pattern = "*.fs,*.fsi,*.fsx",
+    --    callback = function(args)
+    --        -- args.data.client_id
+    --        if M.config.MergedConfig.settings.FSharp.inlayHints.enabled == true then
+    --            vim.defer_fn(function()
+    --                -- util.notify("enabling lsp inlayHint")
+    --                if vim.lsp.buf.inlay_hint then
+    --                    vim.lsp.buf.inlay_hint(args.buf, true)
+    --                elseif vim.lsp.inlay_hint then
+    --                    vim.lsp.inlay_hint.enable(true)
+    --                else
+    --                end
+    --            end, 2000)
+    --        else
+    --            -- util.notify("lsp inlayHints are not enabled.")
+    --        end
+    --    end,
+    --})
 
     autocmd({ "BufEnter", "BufWritePost", "InsertLeave" }, {
         desc = "FSharp Auto refresh code lens ",

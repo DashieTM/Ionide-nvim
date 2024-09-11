@@ -20,9 +20,6 @@ M["textDocument/documentHighlight"] = function(error, result, context, config)
     end
 end
 
---let M.HoverParms = {}
-
-
 M["textDocument/hover"] =
 -- define types
 --- @param error any
@@ -40,10 +37,10 @@ M["textDocument/hover"] =
         if not result then
             util.notify("No information found")
         end
-        -- (?s)<li>(?:(?!</li>).).*?</li>
-        -- TODO remove the annoying link
 
-        result.message = result.contents[1].value
+        --result.message = result.contents[1].value
+        --result.message = util.FormatHover(result.message, {})
+        result.contents[3] = ""
         vim.lsp.handlers.hover(error, result, context or {}, config)
         -- vim.lsp.handlers.hover(error or {}, result or {}, context or {}, config or {})
     end
@@ -163,7 +160,6 @@ function onChoice(finalChoice)
         table.insert(projectParams,
             M.CreateFSharpProjectParams(path))
     end
-    M.CallFSharpWorkspaceLoad(pathsToLoad)
     for _, proj in ipairs(projectParams) do
         vim.lsp.buf_request(0, "fsharp/project", { proj },
             function(payload) end)

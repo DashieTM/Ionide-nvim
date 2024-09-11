@@ -324,5 +324,185 @@ function M.GitFirstRootDir(n)
     return root
 end
 
+---@param input string
+---@return string
+local function unHtmlify(input)
+    input = input or ""
+    -- print("unHtmlify input: " .. input)
+    local result
+    if #input > 2 then
+        result = input:gsub("%%%x%x", function(entity)
+            entity = entity or ""
+            if #entity > 2 then
+                return string.char(tonumber(entity:sub(2), 16))
+            else
+                return entity
+            end
+        end)
+    else
+        result = input
+    end
+    -- print("unHtmlify result: " .. result)
+    return result
+end
+
+function M.returnFuncNameToCallFromCapture(s)
+    local result = ((s or ""):gsub("%.", "/")) -- print("funcName match result : " .. result)
+    result = string.gsub(result, "showDocumentation", "documentationSymbol")
+
+    return result
+end
+
+---matches a document signature command request originally meant for vscode's commands
+---@param s string
+---@return string|nil, string|nil
+function M.matchFsharpDocSigRequest(s)
+    local link_pattern = "<a href='command:(.-)%?(.-)'>"
+    return string.match(s, link_pattern)
+end
+
+--- gets the various parts given by hover request and returns them
+---@param input_string string
+---function name
+---@return string
+---escapedHtml
+---@return string
+---DocumentationForSymbolRequest
+---@return FSharpDocumentationForSymbolRequest
+---label
+---@return string
+local function parse_string(input_string)
+    local function_capture, json_capture = M.matchFsharpDocSigRequest(input_string)
+    if function_capture then
+        M.util.notify(function_capture)
+        if json_capture then
+            M.util.notify(json_capture)
+            local function_name = M.returnFuncNameToCallFromCapture(function_capture)
+            local unHtml = unHtmlify(json_capture)
+            unHtml = unHtml
+            -- print("unHtml :", unHtml)
+            local decoded = (vim.json.decode(unHtml) or {
+                {
+                    XmlDocSig = "NoProperSigGiven",
+                    AssemblyName = "NoProperAssemblyGiven",
+                },
+            })[1]
+            -- util.notify("after decode: " .. vim.inspect(decoded))
+            ---@type FSharpDocumentationForSymbolRequest
+            local decoded_json = M.DocumentationForSymbolRequest(decoded.XmlDocSig, decoded.AssemblyName)
+            M.util.notify({ "as symbolrequest: ", decoded_json })
+            local label_text = input_string:match(">(.-)<")
+            return function_name, unHtml, decoded_json, label_text
+        else
+            return input_string, "",
+                M.DocumentationForSymbolRequest("NoProperSigGiven", "NoProperAssemblyGiven"), ""
+        end
+        return input_string, "", M.DocumentationForSymbolRequest("NoProperSigGiven", "NoProperAssemblyGiven"), ""
+    end
+    return input_string, "", M.DocumentationForSymbolRequest("NoProperSigGiven", "NoProperAssemblyGiven"), ""
+end
+
+local function split_lines(value)
+    value = string.gsub(value, "\r\n?", "\n")
+    return vim.split(value, "\n", { trimempty = true })
+end
+
+function M.FormatHover(input, contents)
+    -- -- value = string.gsub(value, "\r\n?", "\n")
+    -- local thisIonide = vim.lsp.get_active_clients({ name = "ionide" })[1]
+    local result
+    contents = contents or {}
+
+    if type(input) == "string" then
+        -- local lines = vim.split(value, "\n", { trimempty = true })
+        local parsedOrFunctionName, escapedHtml, decodedJsonTable, labelText = parse_string(input)
+        if input == parsedOrFunctionName then
+            -- print("no Match for line " .. line)
+            result = input
+        else
+            if decodedJsonTable then
+                -- result = ""
+                --   .. " "
+                --   .. "FunctionToCall: "
+                --   .. parsedOrFunctionName
+                --   .. " WithParams: "
+                --   .. vim.inspect(decodedJsonTable)
+                -- if not line == parsedOrFunctionName then
+                -- print("decoded json looks like : " .. vim.inspect(decodedJsonTable))
+                -- print(decodedJsonTable.XmlDocSig, decodedJsonTable.AssemblyName)
+                -- if thisIonide then
+                -- M.DocumentationForSymbolRequest(decodedJsonTable.XmlDocSig, decodedJsonTable.AssemblyName)
+                vim.schedule_wrap(function()
+                    vim.lsp.buf_request(0, parsedOrFunctionName, decodedJsonTable, function(e, r)
+                        result = vim.inspect(e) .. vim.inspect(r)
+                        -- util.notify("results from request " .. vim.inspect(parsedOrFunctionName) .. ":" .. result)
+                        table.insert(contents, result)
+                    end)
+                end)
+                -- else
+                -- print("noActiveIonide.. probably testing ")
+                -- end
+            else
+                print("no decoded json")
+            end
+        end
+    else
+        -- MarkupContent
+        if input.kind then
+            -- The kind can be either plaintext or markdown.
+            -- If it's plaintext, then wrap it in a <text></text> block
+
+            -- Some servers send input.value as empty, so let's ignore this :(
+            local value = input.value or ""
+
+            if input.kind == "plaintext" then
+                -- wrap this in a <text></text> block so that stylize_markdown
+                -- can properly process it as plaintext
+                value = string.format("<text>\n%s\n</text>", value)
+            end
+
+            -- assert(type(value) == 'string')
+            vim.list_extend(contents, M.split_lines(value))
+            -- MarkupString variation 2
+        elseif input.language then
+            -- Some servers send input.value as empty, so let's ignore this :(
+            -- assert(type(input.value) == 'string')
+            table.insert(contents, "```" .. input.language)
+            vim.list_extend(contents, M.split_lines(input.value or ""))
+            table.insert(contents, "```")
+            -- By deduction, this must be MarkedString[]
+        else
+            for _, marked_string in ipairs(input) do
+                M.FormatHover(marked_string, contents)
+            end
+        end
+        if (contents[1] == "" or contents[1] == nil) and #contents == 1 then
+            return {}
+        end
+    end
+    return contents
+end
+
+-- used for "fsharp/documentationSymbol" - accepts DocumentationForSymbolReuqest,
+-- returns documentation data about given symbol from given assembly, used for InfoPanel
+-- original fsharp type declaration :
+-- type DocumentationForSymbolReuqest = { XmlSig: string; Assembly: string }
+---@class FSharpDocumentationForSymbolRequest
+---@field XmlSig string
+---@field Assembly string
+
+---Creates a DocumentationForSymbolRequest from the xmlSig and assembly strings
+---@param xmlSig string
+---@param assembly string
+---@return FSharpDocumentationForSymbolRequest
+function M.DocumentationForSymbolRequest(xmlSig, assembly)
+    ---@type FSharpDocumentationForSymbolRequest
+    local result = {
+        XmlSig = xmlSig,
+        Assembly = assembly,
+    }
+    return result
+end
+
 return M
 -- vim:et ts=2 sw=2
