@@ -24,14 +24,6 @@ function M.show_config()
     vim.notify("Config is:\n" .. vim.inspect(M.config.MergedConfig))
 end
 
----determines if input string ends with the suffix given.
----@param s string
----@param suffix string
----@return boolean
-local function stringEndsWith(s, suffix)
-    return s:sub(- #suffix) == suffix
-end
-
 ---@generic F: fun()
 ---@param fn F
 ---@return F
@@ -360,18 +352,20 @@ function M.Initialize()
     M.util.notify("Registering Autocommands...")
     M.autocmds.setupAutoCommands(commands)
 
+    M.util.notify("Fully Initialized!")
     local thisBufnr = vim.api.nvim_get_current_buf()
-    ---@type vim.lsp.Client
-    local thisIonide = vim.lsp.get_clients({ bufnr = thisBufnr, name = "ionide" })[1]
-        or { workspace_folders = { { name = vim.fn.getcwd() } } }
+    local root_dir = M.util.GitFirstRootDir(api.nvim_buf_get_name(thisBufnr))
+    ----@type vim.lsp.Client
+    --local thisIonide = vim.lsp.get_clients({ bufnr = thisBufnr, name = "ionide" })[1]
+    --or
+    --local thisIonide = { workspace_folders = { { name = vim.fn.getcwd() } } }
 
-    local thisBufIonideRootDir = thisIonide.workspace_folders[1].name -- or vim.fn.getcwd()
+    --local thisBufIonideRootDir = thisIonide.workspace_folders[1].name -- or vim.fn.getcwd()
     M.CallFSharpWorkspacePeek(
-        thisBufIonideRootDir,
+        root_dir,
         M.config.MergedConfig.settings.FSharp.workspaceModePeekDeepLevel,
         M.config.MergedConfig.settings.FSharp.excludeProjectDirectories
     )
-    M.util.notify("Fully Initialized!")
 end
 
 function M.try_add(bufnr)

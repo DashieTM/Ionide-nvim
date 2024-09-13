@@ -10,7 +10,7 @@ M.config = require("plugin.config")
 function M.setupAutoCommands(commands)
     M.filetypeCommands()
     --M.bufReadPost()
-    M.bufWritePost()
+    M.bufWritePost(commands)
     M.registerLSPAutocmds()
     uc("IonideTestDocumentationForSymbolRequestParsing", function()
         M.CallFSharpDocumentationSymbol("T:System.String.Trim", "netstandard")
@@ -145,42 +145,40 @@ function M.LoadProjects(projects)
     end
 end
 
-function M.ReloadProjects()
-    util.notify("Reloading Projects")
-    --local foldersCount = #M.projectFolders
-    --if foldersCount > 0 then
-    --handlers.CallFSharpWorkspaceLoad(M.projectFolders)
-    --else
-    --    util.notify("Workspace is empty")
-    --end
+function M.ReloadProjects(commands)
+    local foldersCount = #commands.projectFolders
+    if foldersCount > 0 then
+        util.notify("reloading: " .. vim.inspect(commands.projectFolders))
+        handlers.CallFSharpWorkspaceLoad(commands.projectFolders)
+    else
+        util.notify("Workspace is empty")
+    end
 end
 
 -- TODO
 -- TODO TODO TODO
-function M.OnFSProjSave()
+function M.OnFSProjSave(commands)
     if
         vim.bo.ft == "fsharp_project"
         and M.config.MergedConfig.IonideNvimSettings.AutomaticReloadWorkspace
         and M.config.MergedConfig.IonideNvimSettings.AutomaticReloadWorkspace == true
     then
-        util.notify("fsharp project saved, reloading...")
-        -- TODO
-        --local parentDir = vim.fs.normalize(vim.fs.dirname(vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())))
+        local parentDir = vim.fs.normalize(vim.fs.dirname(vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())))
 
-        --if not vim.tbl_contains(M.projectFolders, parentDir) then
-        --    table.insert(M.projectFolders, parentDir)
-        --end
-        M.ReloadProjects()
+        if not vim.tbl_contains(commands.projectFolders, parentDir) then
+            table.insert(commands.projectFolders, parentDir)
+        end
+        M.ReloadProjects(commands)
     end
 end
 
-function M.bufWritePost()
+function M.bufWritePost(commands)
     autocmd("BufWritePost", {
         pattern = "*.fsproj",
         desc = "FSharp Auto refresh on project save",
         group = vim.api.nvim_create_augroup("FSProjRefreshOnProjectSave", { clear = true }),
         callback = function()
-            M.OnFSProjSave()
+            M.OnFSProjSave(commands)
         end,
     })
 end

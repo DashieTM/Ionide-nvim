@@ -132,19 +132,23 @@ M["fsharp/notifyWorkspace"] = function(payload)
 end
 
 M["fsharp/workspaceLoad"] = function(result)
+    util.notify(vim.inspect(result))
     if not result then
         util.notify(
             "Failed to load workspave\n"
         )
         return
     end
+    vim.lsp.buf_request(0, "fsharp/workspaceLoad", { result },
+        function(_) end)
 end
 
 function onChoice(finalChoice)
-    util.notify("Loading solution : " .. vim.inspect(finalChoice))
+    util.notify("Loading solution : " .. vim.inspect(finalChoice[2]))
     ---@type string[]
     local pathsToLoad = {}
     local projects = finalChoice.Data.Items
+    --util.notify(vim.inspect(projects))
     for _, project in ipairs(projects) do
         if project.Name:match("sproj") then
             table.insert(pathsToLoad,
@@ -152,18 +156,29 @@ function onChoice(finalChoice)
         end
     end
 
-    util.notify(
-        "Going to ask FsAutoComplete to load these project paths.. " ..
-        vim.inspect(pathsToLoad))
+    --util.notify(
+    --    "Going to ask FsAutoComplete to load these project paths.. " ..
+    --    vim.inspect(pathsToLoad))
     local projectParams = {}
     for _, path in ipairs(pathsToLoad) do
-        table.insert(projectParams,
-            M.CreateFSharpProjectParams(path))
+        --table.insert(projectParams,
+        --M.CreateFSharpProjectParams(path))
+        --M.CreateFSharpProjectParams(path))
+        if util.stringEndsWith(path, "proj") then
+            table.insert(projectParams, M.TextDocumentIdentifier(path))
+        end
     end
-    for _, proj in ipairs(projectParams) do
-        vim.lsp.buf_request(0, "fsharp/project", { proj },
-            function(payload) end)
-    end
+    vim.lsp.buf_request(0, "fsharp/workspaceLoad", {
+            TextDocuments = projectParams,
+        },
+        function(payload)
+            util.notify("loaded" .. vim.inspect(payload))
+        end)
+    --for _, proj in ipairs(projectParams) do
+    --end
+    --local path = M.CreateFSharpProjectParams(finalChoice.Data.Path)
+    --vim.lsp.buf_request(0, "fsharp/project", { path },
+    --    function(payload) end)
 end
 
 M["fsharp/workspacePeek"] = function(error, result, context, config)
@@ -375,7 +390,7 @@ end
 ---  - Function which can be used to cancel all the requests. You could instead
 ---    iterate all clients and call their `cancel_request()` methods.
 function M.CallFSharpWorkspaceLoad(projectFiles, handler)
-    return M.Call("fsharp/workspaceLoad", M.CreateFSharpWorkspaceLoadParams(projectFiles), handler)
+    return M.Call("fsharp/workspaceLoad", M.CreateFSharpWorkspaceLoadParams(projectFiles))
 end
 
 ---creates a ProjectParms for fsharp/project call
@@ -417,9 +432,9 @@ end
 function M.CreateFSharpWorkspaceLoadParams(files)
     local prm = {}
     for _, file in ipairs(files) do
-        -- if stringEndsWith(file,"proj") then
-        table.insert(prm, M.TextDocumentIdentifier(file))
-        -- end
+        if util.stringEndsWith(file, "proj") then
+            table.insert(prm, M.TextDocumentIdentifier(file))
+        end
     end
     return { TextDocuments = prm }
 end

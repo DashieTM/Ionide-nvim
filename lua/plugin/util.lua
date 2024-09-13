@@ -504,5 +504,13 @@ function M.DocumentationForSymbolRequest(xmlSig, assembly)
     return result
 end
 
+---determines if input string ends with the suffix given.
+---@param s string
+---@param suffix string
+---@return boolean
+function M.stringEndsWith(s, suffix)
+    return s:sub(- #suffix) == suffix
+end
+
 return M
 -- vim:et ts=2 sw=2
