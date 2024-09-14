@@ -305,6 +305,20 @@ function M.find_package_json_ancestor(startpath)
     end)
 end
 
+function M.find_proj_ancestor(startpath)
+    local result = {}
+    M.search_ancestors(startpath, function(path)
+        local dir = vim.fs.dir(path)
+        for file in dir do
+            if M.stringEndsWith(file, "sproj") then
+                M.notify("found: " .. file)
+                result = { path = path, file = file }
+            end
+        end
+    end)
+    return result
+end
+
 function M.notify(msg, level, opts)
     local safeMessage = "[Ionide] - "
     if type(msg) == "string" then
@@ -510,6 +524,10 @@ end
 ---@return boolean
 function M.stringEndsWith(s, suffix)
     return s:sub(- #suffix) == suffix
+end
+
+function M.TrimParams(param)
+    return param:gsub("\"", "")
 end
 
 return M

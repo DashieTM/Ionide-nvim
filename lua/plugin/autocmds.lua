@@ -12,6 +12,7 @@ function M.setupAutoCommands(commands)
     --M.bufReadPost()
     M.bufWritePost(commands)
     M.registerLSPAutocmds()
+    M.SetupFileMoveCommands()
     uc("IonideTestDocumentationForSymbolRequestParsing", function()
         M.CallFSharpDocumentationSymbol("T:System.String.Trim", "netstandard")
     end, { desc = "testing out the call to the symbol request from a hover" })
@@ -342,6 +343,152 @@ function M.ApplyRecommendedColorscheme()
     highlight! LspDiagnosticsDefaultHint ctermbg=Green ctermfg=White
     highlight! default link LspCodeLens Comment
 ]])
+end
+
+function M.MoveCurrentFile(command)
+    local currentBuf = vim.api.nvim_get_current_buf()
+    local file = vim.fs.normalize(vim.api.nvim_buf_get_name(currentBuf))
+    M.MoveFile(file, command)
+end
+
+function M.MoveFile(file, command)
+    local cwd = vim.fs.normalize(vim.fs.dirname(vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())))
+    local result = util.find_proj_ancestor(cwd)
+    local project = result.file
+    local fixedFile = file:gsub(result.path .. "/", "")
+    local msFile = fixedFile:gsub("/", "\\")
+    util.notify(vim.inspect(msFile))
+    local payload = {
+        FsProj = project,
+        FileVirtualPath = msFile,
+    }
+    util.notify(vim.inspect(payload))
+    vim.lsp.buf_request(0, command, payload,
+        function(payload)
+            if payload then
+                util.notify(vim.inspect(payload))
+            else
+                util.notify("Moved " .. file .. " up")
+            end
+        end)
+end
+
+function M.AddFileCurrent(newFile, command)
+    local currentBuf = vim.api.nvim_get_current_buf()
+    local currentBufName = vim.api.nvim_buf_get_name(currentBuf)
+    local rootDir = vim.fs.normalize(util.GitFirstRootDir(currentBufName))
+    local cwd = vim.fs.normalize(vim.fs.dirname(currentBufName))
+
+    local file = vim.fs.normalize(currentBufName):gsub(rootDir, "")
+    local result = util.find_proj_ancestor(cwd)
+
+    local project = result.file
+    local existingFixedFile = file:gsub(result.path .. "/", "")
+    local existingMsFile = existingFixedFile:gsub("/", "\\")
+    local fileToCreate = rootDir .. newFile
+    local fixedFile = fileToCreate:gsub(result.path .. "/", "")
+    local msFile = fixedFile:gsub("/", "\\")
+    cFile = io.open(fileToCreate, "w")
+    cFile:close()
+    local payload = {
+        FsProj = project,
+        FileVirtualPath = existingMsFile,
+        newFile = msFile,
+    }
+    vim.lsp.buf_request(0, command, payload,
+        function(payload)
+            if payload then
+                util.notify(vim.inspect(payload))
+            else
+                util.notify("Added new file next to: " .. existingMsFile)
+            end
+        end)
+end
+
+function M.AddFile(project, existingFile, newFile, command)
+    local bufnr = vim.api.nvim_get_current_buf()
+    local bufname = vim.fs.normalize(vim.api.nvim_buf_get_name(bufnr))
+    local rootDir = vim.fs.normalize(util.GitFirstRootDir(bufname))
+    local fileToCreate = rootDir .. "/" .. newFile
+    cFile = io.open(fileToCreate, "w")
+    if cfile then
+        cFile:write("")
+        cFile:close()
+    end
+    local fullProjectPath = rootDir .. "/" .. project
+    local fixedFile = fileToCreate:gsub(vim.fs.dirname(fullProjectPath) .. "/", "")
+    local msFile = fixedFile:gsub("/", "\\")
+    local payload = {
+        FsProj = fullProjectPath,
+        FileVirtualPath = existingFile,
+        newFile = msFile,
+    }
+    vim.lsp.buf_request(0, command, payload,
+        function(payload)
+            if payload then
+                util.notify(vim.inspect(payload))
+            else
+                util.notify("Added new file next to: " .. existingFile)
+            end
+        end)
+end
+
+function M.SetupFileMoveCommands()
+    -- works
+    uc("IonideMoveCurrentFileUp", function()
+            M.MoveCurrentFile("fsproj/moveFileUp")
+        end,
+        { desc = "Moves the current file one line up" })
+
+    uc("IonideMoveCurrentFileDown", function()
+            M.MoveCurrentFile("fsproj/moveFileDown")
+        end,
+        { desc = "Moves the current file one line up" })
+
+    uc("IonideMoveFileUp", function(file)
+            M.MoveFile(file, "fsproj/moveFileUp")
+        end,
+        { desc = "Moves a specific file one line up" })
+
+    uc("IonideMoveFileDown", function(file)
+            M.MoveFile(file, "fsproj/moveFileDown")
+        end,
+        { desc = "Moves a specific file one line up" })
+
+    uc("IonideAddFileAboveCurrent", function(file)
+            M.AddFileCurrent(file, "fsproj/addFileAbove")
+        end,
+        { desc = "Add file above the current file" })
+
+    uc("IonideAddFileBelowCurrent", function(file)
+            M.AddFileCurrent(file, "fsproj/addFileBelow")
+        end,
+        { desc = "Add file below the current file" })
+
+    uc("IonideAddFileAbove", function(args)
+            M.AddFile(util.TrimParams(args.fargs[1]), M.TrimParams(args.fargs[2]), M.TrimParams(args.fargs[3]),
+                "fsproj/addFileAbove")
+        end,
+        { desc = "Add file above an existing file" })
+
+    uc("IonideAddFileBelow", function(project, existingFile, newFile)
+            M.AddFile(util.TrimParams(args.fargs[1]), M.TrimParams(args.fargs[2]), M.TrimParams(args.fargs[3]),
+                "fsproj/addFileBelow")
+        end,
+        { desc = "Add file below an existing file" })
+
+    -- TODO
+    uc("IonideAddNewFileToProject", function(file) end,
+        { desc = "Adds a new file to the project" })
+
+    uc("IonideAddExistingFileToProject", function(file) end,
+        { desc = "Adds an existing file to the project" })
+
+    uc("IonideRenameFile", function(file) end,
+        { desc = "Renames an existing file" })
+
+    uc("IonideRemoveFile", function(file) end,
+        { desc = "Removes and existing file" })
 end
 
 return M

@@ -62,6 +62,7 @@ M["fsharp/showDocumentation"] = function(error, result, context, config)
         end
     end
 end
+
 M["fsharp/documentationSymbol"] = function(error, result, context, config)
     if error then
         util.notify("received error" .. error)
