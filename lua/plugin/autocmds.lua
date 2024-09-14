@@ -421,9 +421,35 @@ function M.AddFile(project, existingFile, newFile, command)
     local payload = {
         FsProj = fullProjectPath,
         FileVirtualPath = existingFile,
-        newFile = msFile,
+        NewFile = msFile,
     }
     vim.lsp.buf_request(0, command, payload,
+        function(payload)
+            if payload then
+                util.notify(vim.inspect(payload))
+            else
+                util.notify("Added new file next to: " .. existingFile)
+            end
+        end)
+end
+
+function M.RenameFile(project, existingFile, newFile)
+    local bufnr = vim.api.nvim_get_current_buf()
+    local bufname = vim.fs.normalize(vim.api.nvim_buf_get_name(bufnr))
+    local cwd = vim.fs.normalize(vim.fs.dirname(bufname))
+    local rootDir = vim.fs.normalize(util.GitFirstRootDir(bufname))
+    local fullProjectPath = rootDir .. "/" .. project
+    local result = util.find_proj_ancestor(cwd)
+
+    local fixedFile = existingFile:gsub(result.path .. "/", "")
+    local msFile = fixedFile:gsub("/", "\\")
+
+    local payload = {
+        FsProj = fullProjectPath,
+        OldFileVirtualPath = msFile,
+        NewFileName = newFile,
+    }
+    vim.lsp.buf_request(0, "fsproj/renameFile", payload,
         function(payload)
             if payload then
                 util.notify(vim.inspect(payload))
@@ -477,17 +503,25 @@ function M.SetupFileMoveCommands()
         end,
         { desc = "Add file below an existing file" })
 
-    -- TODO
-    uc("IonideAddNewFileToProject", function(file) end,
-        { desc = "Adds a new file to the project" })
-
-    uc("IonideAddExistingFileToProject", function(file) end,
-        { desc = "Adds an existing file to the project" })
-
-    uc("IonideRenameFile", function(file) end,
+    uc("IonideRenameFile", function(args)
+            M.RenameFile(util.TrimParams(args.fargs[1]), M.TrimParams(args.fargs[2]), M.TrimParams(args.fargs[3]))
+        end,
         { desc = "Renames an existing file" })
 
-    uc("IonideRemoveFile", function(file) end,
+    -- TODO
+    uc("IonideAddNewFileToProject", function(file)
+            util.notify("TODO")
+        end,
+        { desc = "Adds a new file to the project" })
+
+    uc("IonideAddExistingFileToProject", function(file)
+            util.notify("TODO")
+        end,
+        { desc = "Adds an existing file to the project" })
+
+    uc("IonideRemoveFile", function(file)
+            util.notify("TODO")
+        end,
         { desc = "Removes and existing file" })
 end
 
