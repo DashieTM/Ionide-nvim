@@ -416,12 +416,36 @@ function M.MakeConfig(_root_dir)
     local new_config = vim.tbl_deep_extend("keep", vim.empty_dict(), config)
     new_config = vim.tbl_deep_extend("keep", new_config, M.config.DefaultLspConfig)
     new_config.capabilities = new_config.capabilities or lsp.protocol.make_client_capabilities()
+    new_config.capabilities = vim.tbl_deep_extend("keep", new_config.capabilities, {
+        workspace = {
+            configuration = true,
+        },
+    })
+    if config.on_new_config then
+        pcall(config.on_new_config, new_config, _root_dir)
+    end
+    new_config.on_init = M.util.add_hook_after(new_config.on_init, function(client, _result)
+        function client.workspace_did_change_configuration(settings)
+            if not settings then
+                return
+            end
+            if vim.tbl_isempty(settings) then
+                settings = { [vim.type_idx] = vim.types.dictionary }
+            end
+            return client.notify("workspace/didChangeConfiguration", {
+                settings = settings,
+            })
+        end
+
+        if not vim.tbl_isempty(new_config.settings) then
+            client.workspace_did_change_configuration(new_config.settings)
+        end
+    end)
     new_config._on_attach = new_config.on_attach
     new_config.on_attach = vim.schedule_wrap(function(client, bufnr)
         if bufnr == api.nvim_get_current_buf() then
             M._setup_buffer(client.id, bufnr)
         else
-            M.util.notify("NOT called on attach")
             api.nvim_command(
                 string.format(
                     "autocmd BufEnter <buffer=%d> ++once lua require'ionide'._setup_buffer(%d,%d)",
