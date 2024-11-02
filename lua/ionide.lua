@@ -12,8 +12,8 @@ M.Manager = nil
 
 ---@param config
 function M.setup(config)
-        M.config.MergedConfig = vim.tbl_deep_extend("force", M.config.DefaultLspConfig, config)
-        local manager = M.CreateManager(M.config.MergedConfig)
+        local new_config = vim.tbl_deep_extend("keep", config, M.config.DefaultLspConfig)
+        local manager = M.CreateManager(new_config)
 end
 
 function M.show_config()
@@ -410,17 +410,16 @@ function M.Autostart()
 end
 
 function M.MakeConfig(_root_dir)
-        ---@type lspconfig.options.fsautocomplete
-        local new_config = vim.tbl_deep_extend("keep", vim.empty_dict(), config)
-        new_config = vim.tbl_deep_extend("keep", new_config, M.config.DefaultLspConfig)
+        ---    @type lspconfig.options.fsautocomplete
+        local new_config = M.config.MergedConfig
         new_config.capabilities = new_config.capabilities or lsp.protocol.make_client_capabilities()
         new_config.capabilities = vim.tbl_deep_extend("keep", new_config.capabilities, {
                 workspace = {
                         configuration = true,
                 },
         })
-        if config.on_new_config then
-                pcall(config.on_new_config, new_config, _root_dir)
+        if M.config.MergedConfig.on_new_config then
+                pcall(M.config.MergedConfig.on_new_config, new_config, _root_dir)
         end
         new_config.on_init = M.util.add_hook_after(new_config.on_init, function(client, _result)
                 function client.workspace_did_change_configuration(settings)
@@ -460,7 +459,8 @@ end
 
 ---Create Ionide Manager
 ---@param config IonideOptions
-function M.CreateManager(conf)
+function M.CreateManager(config)
+        M.config.MergedConfig = config
         --validate({
         --    cmd = { config.cmd, "t", true },
         --    root_dir = { config.root_dir, "f", true },
@@ -468,8 +468,7 @@ function M.CreateManager(conf)
         --    on_attach = { config.on_attach, "f", true },
         --    on_new_config = { config.on_new_config, "f", true },
         --})
-        config = vim.tbl_deep_extend("keep", conf, M.config.DefaultLspConfig)
-        M.get_root_dir = config.root_dir
+        M.get_root_dir = M.config.MergedConfig.root_dir
 
 
         local reload = false
