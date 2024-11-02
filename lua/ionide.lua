@@ -12,7 +12,9 @@ M.Manager = nil
 
 ---@param config
 function M.setup(config)
-        local new_config = vim.tbl_deep_extend("keep", config, M.config.DefaultLspConfig)
+        -- TODO this is broken, thanks lua you amazing (GARBAGE) language
+        --local new_config = vim.tbl_deep_extend("keep", config, M.config.DefaultLspConfig)
+        local new_config = M.config.DefaultLspConfig
         local manager = M.CreateManager(new_config)
 end
 

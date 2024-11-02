@@ -86,24 +86,16 @@ M.DefaultServerSettings = {
         fcs = { transparentCompiler = { enabled = true } },
         fsac = {
                 attachDebugger = false,
-                cachedTypeCheckCount = 200,
-                conserveMemory = true,
+                cachedTypeCheckCount = 100000,
+                conserveMemory = false,
                 silencedLogs = {},
                 parallelReferenceResolution = true,
-                -- "FSharp.fsac.sourceTextImplementation": {
-                --        "default": "NamedText",
-                --    "description": "EXPERIMENTAL. Enables the use of a new source text implementation. This may have better memory characteristics. Requires restart.",
-                --      "enum": [
-                --        "NamedText",
-                --        "RoslynSourceText"
-                --      ]
-                --    },
                 sourceTextImplementation = "RoslynSourceText",
                 dotnetArgs = {},
                 netCoreDllPath = "",
                 gc = {
                         conserveMemory = 0,
-                        heapCount = 2,
+                        heapCount = 32,
                         noAffinitize = true,
                         server = true,
                 },
@@ -125,17 +117,17 @@ M.DefaultServerSettings = {
         --     UnionCaseStubGeneration: bool option false
         unionCaseStubGeneration = true,
         --     UnionCaseStubGenerationBody: string option """failwith "Not Implemented" """
-        unionCaseStubGenerationBody = 'failwith "Not Implemented"',
+        unionCaseStubGenerationBody = '',
         --     RecordStubGeneration: bool option false
         recordStubGeneration = true,
         --     RecordStubGenerationBody: string option "failwith \"Not Implemented\""
-        recordStubGenerationBody = 'failwith "Not Implemented"',
+        recordStubGenerationBody = '',
         --     InterfaceStubGeneration: bool option false
         interfaceStubGeneration = true,
         --     InterfaceStubGenerationObjectIdentifier: string option "this"
         interfaceStubGenerationObjectIdentifier = "this",
         --     InterfaceStubGenerationMethodBody: string option "failwith \"Not Implemented\""
-        interfaceStubGenerationMethodBody = 'failwith "Not Implemented"',
+        interfaceStubGenerationMethodBody = '',
         --     UnusedOpensAnalyzer: bool option false
         unusedOpensAnalyzer = true,
         --     UnusedDeclarationsAnalyzer: bool option false
@@ -191,7 +183,7 @@ M.DefaultServerSettings = {
         generateBinlog = false,
         abstractClassStubGeneration = true,
         abstractClassStubGenerationObjectIdentifier = "this",
-        abstractClassStubGenerationMethodBody = 'failwith "Not Implemented"',
+        abstractClassStubGenerationMethodBody = '',
 
         -- configures which parts of the CodeLens are enabled, if any
         -- defaults to both signature and references being true
@@ -232,7 +224,7 @@ M.DefaultServerSettings = {
         --       }
         debug = {
                 dontCheckRelatedFiles = false,
-                checkFileDebouncerTimeout = 250,
+                checkFileDebouncerTimeout = 10,
                 logDurationBetweenCheckFiles = false,
                 logCheckFileDuration = false,
         },
@@ -251,7 +243,7 @@ M.DefaultNvimSettings = {
         AutomaticWorkspaceInit = false,
         AutomaticReloadWorkspace = true,
         AutomaticCodeLensRefresh = true,
-        ShowSignatureOnCursorMove = true,
+        ShowSignatureOnCursorMove = false,
         FsiCommand = "dotnet fsi",
         FsiKeymap = "vscode",
         FsiWindowCommand = "botright 10new",
@@ -259,15 +251,13 @@ M.DefaultNvimSettings = {
         EnableFsiStdOutTeeToFile = false,
         LspAutoSetup = false,
         LspRecommendedColorScheme = false,
-        FsiVscodeKeymaps = true,
+        FsiVscodeKeymaps = false,
         FsiStdOutFileName = "",
         StatusLine = "Ionide",
         AutocmdEvents = {
                 "LspAttach",
                 "BufEnter",
                 "BufWritePost",
-                "CursorHold",
-                "CursorHoldI",
                 "InsertEnter",
                 "InsertLeave",
         },
